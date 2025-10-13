@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   console.log('📸 Received book scan request');
 
   try {
-    const { image } = req.body;
+    const { image, detailedSummary = false } = req.body;
 
     // Validate image data
     if (!image) {

@@ -1,6 +1,7 @@
 // src/pages/index.jsx
 import { useState, useRef } from 'react';
 import { Camera, Sparkles, Star, BookOpen, ArrowLeft, ExternalLink, Heart } from 'lucide-react';
+import { Analytics } from "@vercel/analytics/next"
 
 export default function Home() {
   const [image, setImage] = useState(null);

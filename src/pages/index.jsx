@@ -188,12 +188,12 @@ export default function Home() {
               className="glass-strong rounded-full px-4 py-2 shadow-lg hover:scale-105 transition-smooth flex items-center gap-2"
             >
               <History className="w-4 h-4 text-purple-600" />
-              <span className="text-sm font-medium text-gray-800">History ({history.length})</span>
+              <span className="text-sm font-medium text-gray-800 dark:text-white">History ({history.length})</span>
             </button>
 
             <div className="inline-flex items-center gap-2 glass-strong rounded-full px-6 py-3 shadow-lg">
               <BookOpen className="w-5 h-5 text-purple-600" />
-              <span className="font-semibold text-gray-800">BookLens</span>
+              <span className="font-semibold text-gray-800 dark:text-white">BookLens</span>
             </div>
 
             <button
@@ -201,7 +201,7 @@ export default function Home() {
               className="glass-strong rounded-full px-4 py-2 shadow-lg hover:scale-105 transition-smooth flex items-center gap-2"
             >
               <TrendingUp className="w-4 h-4 text-purple-600" />
-              <span className="text-sm font-medium text-gray-800">For You</span>
+              <span className="text-sm font-medium text-gray-800 dark:text-white">For You</span>
             </button>
           </div>
 

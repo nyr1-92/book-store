@@ -178,8 +178,7 @@ export default function Home() {
   const preferences = analyzePreferences();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-4 md:p-8">
-      <div className="max-w-2xl mx-auto">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900 dark:to-pink-900 p-4 md:p-8">      <div className="max-w-2xl mx-auto">
         
         {/* Header */}
         <header className="text-center mb-8 animate-fade-in-up">
@@ -206,10 +205,10 @@ export default function Home() {
             </button>
           </div>
 
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-3">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-3 dark:text-white">
             Discover Your Next Read
           </h1>
-          <p className="text-gray-600 text-lg">
+          <p className="text-gray-600 text-lg dark:text-white">
             Snap a book cover, get instant insights—no spoilers!
           </p>
 
@@ -369,7 +368,7 @@ export default function Home() {
                 </div>
 
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                  <h2 className="text-2xl font-bold text-gray-800 mb-2 dark:text-gray-300">
                     Scan a Book Cover
                   </h2>
                   <p className="text-gray-600">

@@ -1,6 +1,7 @@
 // src/lib/bookHistory.js
 
 const STORAGE_KEY = 'booklens_history';
+const SAVED_KEY = 'booklens_saved';
 const MAX_HISTORY = 50; // Keep last 50 scans
 
 /**
@@ -81,6 +82,98 @@ export const deleteFromHistory = (bookId) => {
   } catch (error) {
     console.error('Error deleting from history:', error);
     return [];
+  }
+};
+
+/**
+ * Save a book to favorites
+ */
+export const saveToFavorites = (bookData) => {
+  try {
+    const saved = getSavedBooks();
+    
+    // Check if already saved
+    const exists = saved.find(
+      (book) => book.title.toLowerCase() === bookData.title.toLowerCase()
+    );
+    
+    if (exists) {
+      return saved; // Already saved
+    }
+    
+    // Add saved timestamp
+    const bookEntry = {
+      ...bookData,
+      savedAt: new Date().toISOString(),
+    };
+    
+    // Add to beginning
+    saved.unshift(bookEntry);
+    
+    // Save to localStorage
+    localStorage.setItem(SAVED_KEY, JSON.stringify(saved));
+    
+    return saved;
+  } catch (error) {
+    console.error('Error saving to favorites:', error);
+    return [];
+  }
+};
+
+/**
+ * Get all saved books
+ */
+export const getSavedBooks = () => {
+  try {
+    const stored = localStorage.getItem(SAVED_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.error('Error reading saved books:', error);
+    return [];
+  }
+};
+
+/**
+ * Remove from favorites
+ */
+export const removeFromFavorites = (bookTitle) => {
+  try {
+    const saved = getSavedBooks();
+    const filtered = saved.filter(
+      (book) => book.title.toLowerCase() !== bookTitle.toLowerCase()
+    );
+    localStorage.setItem(SAVED_KEY, JSON.stringify(filtered));
+    return filtered;
+  } catch (error) {
+    console.error('Error removing from favorites:', error);
+    return [];
+  }
+};
+
+/**
+ * Check if book is saved
+ */
+export const isBookSaved = (bookTitle) => {
+  try {
+    const saved = getSavedBooks();
+    return saved.some(
+      (book) => book.title.toLowerCase() === bookTitle.toLowerCase()
+    );
+  } catch (error) {
+    return false;
+  }
+};
+
+/**
+ * Clear all saved books
+ */
+export const clearSavedBooks = () => {
+  try {
+    localStorage.removeItem(SAVED_KEY);
+    return true;
+  } catch (error) {
+    console.error('Error clearing saved books:', error);
+    return false;
   }
 };
 

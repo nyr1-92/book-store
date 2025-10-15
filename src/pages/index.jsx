@@ -1,4 +1,3 @@
-// src/pages/index.jsx
 import { useState, useRef, useEffect } from 'react';
 import { Camera, Sparkles, Star, BookOpen, ArrowLeft, ExternalLink, Heart, History, TrendingUp, AlertTriangle, ChevronRight, X } from 'lucide-react';
 import { saveToHistory, getHistory, clearHistory, deleteFromHistory, analyzePreferences } from '@/lib/bookHistory';
@@ -17,6 +16,7 @@ export default function Home() {
   const [showDetailedSummary, setShowDetailedSummary] = useState(false);
   const [detailedData, setDetailedData] = useState(null);
   const [loadingDetailed, setLoadingDetailed] = useState(false);
+  const [showPrices, setPrices] = useState(null)
   const fileInputRef = useRef(null);
 
   // Load history on mount
@@ -177,49 +177,74 @@ export default function Home() {
 
   const preferences = analyzePreferences();
 
+  const getPrices = async () => {
+    
+    prices = null
+
+    try {
+      const response = await fetch('/api/check-prices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prices })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setPrices(data.data);
+      }
+    } catch (err) {
+      console.error('❌ Error getting prices:', err);
+    }
+
+
+
+  };
+
   return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-purple-900 dark:to-pink-900 p-4 md:p-8">      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen p-4 md:p-8 transition-colors duration-300 bg-white dark:bg-[#212121]">
+      <div className="max-w-2xl mx-auto">
         
         {/* Header */}
         <header className="text-center mb-8 animate-fade-in-up">
           <div className="flex items-center justify-between mb-4">
             <button
               onClick={() => setShowHistory(!showHistory)}
-              className="glass-strong rounded-full px-4 py-2 shadow-lg hover:scale-105 transition-smooth flex items-center gap-2"
+              className="rounded-full px-4 py-2 shadow-sm hover:scale-105 transition-smooth flex items-center gap-2 bg-gray-100 dark:bg-[#2f2f2f] hover:bg-gray-200 dark:hover:bg-[#3a3a3a]"
             >
-              <History className="w-4 h-4 text-purple-600" />
-              <span className="text-sm font-medium text-gray-800 dark:text-white">History ({history.length})</span>
+              <History className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">History ({history.length})</span>
             </button>
 
-            <div className="inline-flex items-center gap-2 glass-strong rounded-full px-6 py-3 shadow-lg">
-              <BookOpen className="w-5 h-5 text-purple-600" />
-              <span className="font-semibold text-gray-800 dark:text-white">BookLens</span>
+            <div className="inline-flex items-center gap-2 rounded-full px-6 py-3 shadow-sm bg-gray-100 dark:bg-[#2f2f2f]">
+              <BookOpen className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+              <span className="font-semibold text-gray-800 dark:text-gray-200">BookLens</span>
             </div>
 
             <button
               onClick={getRecommendations}
-              className="glass-strong rounded-full px-4 py-2 shadow-lg hover:scale-105 transition-smooth flex items-center gap-2"
+              className="rounded-full px-4 py-2 shadow-sm hover:scale-105 transition-smooth flex items-center gap-2 bg-gray-100 dark:bg-[#2f2f2f] hover:bg-gray-200 dark:hover:bg-[#3a3a3a]"
             >
-              <TrendingUp className="w-4 h-4 text-purple-600" />
-              <span className="text-sm font-medium text-gray-800 dark:text-white">For You</span>
+              <TrendingUp className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">For You</span>
             </button>
           </div>
 
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-3 dark:text-white">
+          <h1 className="text-4xl md:text-5xl font-bold mb-3 text-gray-900 dark:text-gray-100">
             Discover Your Next Read
           </h1>
-          <p className="text-gray-600 text-lg dark:text-white">
+          <p className="text-lg text-gray-600 dark:text-gray-400">
             Snap a book cover, get instant insights—no spoilers!
           </p>
 
           {/* User Stats */}
           {preferences && (
             <div className="mt-4 flex gap-2 justify-center flex-wrap">
-              <span className="px-3 py-1 rounded-full bg-white/50 text-sm text-gray-700">
+              <span className="px-3 py-1 rounded-full text-sm bg-gray-100 dark:bg-[#2f2f2f] text-gray-700 dark:text-gray-300">
                 📚 {preferences.totalScanned} scanned
               </span>
               {preferences.topGenres[0] && (
-                <span className="px-3 py-1 rounded-full bg-purple-100/80 text-sm text-purple-800">
+                <span className="px-3 py-1 rounded-full text-sm bg-gray-100 dark:bg-[#2f2f2f] text-gray-700 dark:text-gray-300">
                   ❤️ {preferences.topGenres[0]}
                 </span>
               )}
@@ -231,19 +256,19 @@ export default function Home() {
         {showHistory && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 animate-fade-in-up" onClick={() => setShowHistory(false)}>
             <div 
-              className="absolute right-0 top-0 bottom-0 w-full max-w-md bg-white shadow-2xl overflow-y-auto"
+              className="absolute right-0 top-0 bottom-0 w-full max-w-md shadow-2xl overflow-y-auto bg-white dark:bg-[#2f2f2f]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-800">Scan History</h2>
-                  <button onClick={() => setShowHistory(false)} className="p-2 hover:bg-gray-100 rounded-full">
-                    <X className="w-6 h-6" />
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Scan History</h2>
+                  <button onClick={() => setShowHistory(false)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-[#3a3a3a]">
+                    <X className="w-6 h-6 text-gray-700 dark:text-gray-300" />
                   </button>
                 </div>
 
                 {history.length === 0 ? (
-                  <p className="text-gray-600 text-center py-12">No books scanned yet!</p>
+                  <p className="text-center py-12 text-gray-600 dark:text-gray-400">No books scanned yet!</p>
                 ) : (
                   <>
                     <button
@@ -256,14 +281,14 @@ export default function Home() {
                       {history.map((book) => (
                         <div
                           key={book.id}
-                          className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-smooth cursor-pointer flex items-start gap-3"
+                          className="p-4 rounded-lg transition-smooth cursor-pointer flex items-start gap-3 bg-gray-50 dark:bg-[#212121] hover:bg-gray-100 dark:hover:bg-[#3a3a3a]"
                           onClick={() => handleHistoryClick(book)}
                         >
-                          <BookOpen className="w-5 h-5 text-purple-600 mt-1 flex-shrink-0" />
+                          <BookOpen className="w-5 h-5 mt-1 flex-shrink-0 text-gray-700 dark:text-gray-300" />
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-gray-800 truncate">{book.title}</h3>
-                            <p className="text-sm text-gray-600 truncate">{book.author}</p>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <h3 className="font-semibold truncate text-gray-900 dark:text-gray-100">{book.title}</h3>
+                            <p className="text-sm truncate text-gray-600 dark:text-gray-400">{book.author}</p>
+                            <p className="text-xs mt-1 text-gray-500 dark:text-gray-500">
                               {new Date(book.scannedAt).toLocaleDateString()}
                             </p>
                           </div>
@@ -272,7 +297,7 @@ export default function Home() {
                               e.stopPropagation();
                               handleDeleteHistoryItem(book.id);
                             }}
-                            className="text-gray-400 hover:text-red-600 p-1"
+                            className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-500"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -290,56 +315,56 @@ export default function Home() {
         {showRecommendations && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in-up" onClick={() => setShowRecommendations(false)}>
             <div 
-              className="glass-strong rounded-3xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl"
+              className="rounded-3xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl bg-white dark:bg-[#2f2f2f]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-3xl font-bold text-gray-800">Recommended For You</h2>
-                <button onClick={() => setShowRecommendations(false)} className="p-2 hover:bg-white/50 rounded-full">
-                  <X className="w-6 h-6" />
+                <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Recommended For You</h2>
+                <button onClick={() => setShowRecommendations(false)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-[#3a3a3a]">
+                  <X className="w-6 h-6 text-gray-700 dark:text-gray-300" />
                 </button>
               </div>
 
               {loadingRecommendations ? (
                 <div className="flex flex-col items-center gap-4 py-12">
-                  <Sparkles className="w-12 h-12 text-purple-600 animate-pulse" />
-                  <p className="text-gray-600">Analyzing your taste...</p>
+                  <Sparkles className="w-12 h-12 animate-pulse text-gray-700 dark:text-gray-300" />
+                  <p className="text-gray-600 dark:text-gray-400">Analyzing your taste...</p>
                 </div>
               ) : recommendations ? (
                 <>
                   {recommendations.insight && (
-                    <p className="text-gray-700 mb-6 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                    <p className="mb-6 p-4 rounded-lg border text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-[#212121] border-gray-200 dark:border-gray-700">
                       💡 <strong>Your Reading Profile:</strong> {recommendations.insight}
                     </p>
                   )}
                   <div className="space-y-4">
                     {recommendations.recommendations.map((rec, i) => (
-                      <div key={i} className="p-6 bg-white/60 backdrop-blur-sm rounded-2xl border border-white/80 hover:shadow-lg transition-smooth">
+                      <div key={i} className="p-6 rounded-2xl border transition-smooth hover:shadow-lg bg-gray-50 dark:bg-[#212121] border-gray-200 dark:border-gray-700">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
-                            <h3 className="text-xl font-bold text-gray-800">{rec.title}</h3>
-                            <p className="text-gray-600">by {rec.author}</p>
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">{rec.title}</h3>
+                            <p className="text-gray-600 dark:text-gray-400">by {rec.author}</p>
                           </div>
                           <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                            rec.matchScore === 'high' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                            rec.matchScore === 'high' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300' : 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300'
                           }`}>
                             {rec.matchScore === 'high' ? '🎯 Perfect Match' : '✨ Good Match'}
                           </span>
                         </div>
                         <div className="flex gap-2 mb-3">
                           {rec.genre?.map((g, j) => (
-                            <span key={j} className="px-2 py-1 rounded-full bg-purple-100 text-purple-800 text-xs">
+                            <span key={j} className="px-2 py-1 rounded-full text-xs bg-gray-200 dark:bg-[#3a3a3a] text-gray-700 dark:text-gray-300">
                               {g}
                             </span>
                           ))}
                         </div>
-                        <p className="text-gray-700 text-sm leading-relaxed">{rec.reason}</p>
+                        <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300">{rec.reason}</p>
                       </div>
                     ))}
                   </div>
                 </>
               ) : (
-                <p className="text-gray-600 text-center py-12">Failed to load recommendations. Try again!</p>
+                <p className="text-center py-12 text-gray-600 dark:text-gray-400">Failed to load recommendations. Try again!</p>
               )}
             </div>
           </div>
@@ -360,37 +385,32 @@ export default function Home() {
             /* Upload Screen */
             <div
               onClick={triggerFileInput}
-              className="relative overflow-hidden rounded-3xl glass p-16 text-center cursor-pointer transition-smooth hover:scale-[1.02] hover:shadow-xl shadow-soft group"
+              className="relative overflow-hidden rounded-3xl p-16 text-center cursor-pointer transition-smooth hover:scale-[1.02] hover:shadow-xl shadow-lg group bg-gray-50 dark:bg-[#2f2f2f] border border-gray-200 dark:border-gray-700"
             >
               <div className="flex flex-col items-center gap-6">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-400 via-pink-400 to-rose-400 flex items-center justify-center shadow-hard transition-smooth group-hover:scale-110">
-                  <Camera className="w-12 h-12 text-white" />
+                <div className="w-24 h-24 rounded-full flex items-center justify-center shadow-lg transition-smooth group-hover:scale-110 bg-gray-200 dark:bg-[#3a3a3a]">
+                  <Camera className="w-12 h-12 text-gray-700 dark:text-gray-300" />
                 </div>
 
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-800 mb-2 dark:text-gray-300">
+                  <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-gray-100">
                     Scan a Book Cover
                   </h2>
-                  <p className="text-gray-600">
+                  <p className="text-gray-600 dark:text-gray-400">
                     Tap to upload a photo or take one now
                   </p>
                 </div>
 
                 <div className="flex flex-wrap gap-2 justify-center mt-4">
-                  <span className="px-3 py-1 rounded-full bg-white/50 text-sm text-gray-700">
-                    ✨ AI-Powered
-                  </span>
-                  <span className="px-3 py-1 rounded-full bg-white/50 text-sm text-gray-700">
+                  
+                  <span className="px-3 py-1 rounded-full text-sm bg-gray-200 dark:bg-[#3a3a3a] text-gray-700 dark:text-gray-300">
                     🚫 No Spoilers
                   </span>
-                  <span className="px-3 py-1 rounded-full bg-white/50 text-sm text-gray-700">
+                  <span className="px-3 py-1 rounded-full text-sm bg-gray-200 dark:bg-[#3a3a3a] text-gray-700 dark:text-gray-300">
                     ⚡ Instant Results
                   </span>
                 </div>
               </div>
-
-              <div className="absolute top-4 right-4 w-20 h-20 rounded-full bg-purple-300/30 blur-2xl"></div>
-              <div className="absolute bottom-4 left-4 w-24 h-24 rounded-full bg-pink-300/30 blur-2xl"></div>
             </div>
 
           ) : (
@@ -442,26 +462,31 @@ export default function Home() {
 
               {/* Book Information Card */}
               {bookData && !error && (
-                <div className="glass-strong rounded-3xl p-6 md:p-8 shadow-hard space-y-6 animate-fade-in-up">
+                <div className="rounded-3xl p-6 md:p-8 shadow-lg space-y-6 animate-fade-in-up bg-gray-50 dark:bg-[#2f2f2f] border border-gray-200 dark:border-gray-700">
                   
                   <div>
-                    <h2 className="text-3xl font-bold text-gray-800 mb-2">
+                    <h2 className="text-3xl font-bold mb-2 text-gray-900 dark:text-gray-100">
                       {bookData.title}
                     </h2>
-                    <p className="text-xl text-gray-600">
+                    <p className="text-xl text-gray-600 dark:text-gray-400">
                       by {bookData.author}
                     </p>
+                    {bookData.vibe && (
+                      <p className="text-sm mt-2 italic text-gray-600 dark:text-gray-400">
+                        ✨ {bookData.vibe}
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex gap-2 flex-wrap">
-                    <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-sm font-semibold shadow-lg">
+                    <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-white text-sm font-semibold shadow-md bg-amber-500 dark:bg-amber-600">
                       <Star className="w-4 h-4 fill-white" />
                       {bookData.estimatedRating}
                     </span>
                     {bookData.genre.map((g, i) => (
                       <span 
                         key={i} 
-                        className="px-4 py-2 rounded-full bg-white/60 backdrop-blur-sm text-purple-800 text-sm font-medium border border-purple-200"
+                        className="px-4 py-2 rounded-full text-sm font-medium bg-gray-200 dark:bg-[#3a3a3a] text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
                       >
                         {g}
                       </span>
@@ -481,11 +506,11 @@ export default function Home() {
 
                   {/* Spoiler-Free Summary */}
                   <div className="pt-2">
-                    <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <h3 className="font-semibold mb-3 flex items-center gap-2 text-gray-900 dark:text-gray-100">
                       <span className="text-2xl">📖</span>
                       Spoiler-Free Summary
                     </h3>
-                    <p className="text-gray-700 leading-relaxed text-lg">
+                    <p className="leading-relaxed text-lg text-gray-700 dark:text-gray-300">
                       {bookData.summary}
                     </p>
                   </div>
@@ -504,7 +529,7 @@ export default function Home() {
                         </>
                       ) : (
                         <>
-                          <AlertTriangle className="w-5 h-5 text-orange-600" />
+                          <AlertTriangle className="w-5 h-5 text-orange-600 dark:text-orange-500" />
                           Get Detailed Summary (May Contain Spoilers)
                         </>
                       )}
@@ -627,11 +652,7 @@ export default function Home() {
           )}
 
         </main>
-
-        {/* Footer */}
-        <footer className="text-center mt-12 text-sm text-gray-600 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-          <p>Powered by AI • No spoilers, just insights ✨</p>
-        </footer>
+        
 
       </div>
     </div>

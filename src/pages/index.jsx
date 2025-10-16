@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Camera, Sparkles, Star, BookOpen, ArrowLeft, ExternalLink, Heart, History, TrendingUp, AlertTriangle, ChevronRight, X } from 'lucide-react';
-import { saveToHistory, getHistory, clearHistory, deleteFromHistory, analyzePreferences } from '@/lib/bookHistory';
+import { Camera, Sparkles, Star, BookOpen, ArrowLeft, ExternalLink, Heart, History, TrendingUp, AlertTriangle, ChevronRight, X, DollarSign } from 'lucide-react';
+import { saveToHistory, getHistory, clearHistory, deleteFromHistory, analyzePreferences, saveToFavorites, getSavedBooks, removeFromFavorites, isBookSaved, clearSavedBooks } from '@/lib/bookHistory';
 
 export default function Home() {
   const [image, setImage] = useState(null);
@@ -8,20 +8,25 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [bookData, setBookData] = useState(null);
   const [error, setError] = useState(null);
-  const [showHistory, setShowHistory] = useState(false);
+  const [showLibrary, setShowLibrary] = useState(false);
+  const [libraryTab, setLibraryTab] = useState('scanned'); // 'scanned' or 'saved'
   const [history, setHistory] = useState([]);
+  const [savedBooks, setSavedBooks] = useState([]);
   const [showRecommendations, setShowRecommendations] = useState(false);
   const [recommendations, setRecommendations] = useState(null);
   const [loadingRecommendations, setLoadingRecommendations] = useState(false);
   const [showDetailedSummary, setShowDetailedSummary] = useState(false);
   const [detailedData, setDetailedData] = useState(null);
   const [loadingDetailed, setLoadingDetailed] = useState(false);
-  const [showPrices, setPrices] = useState(null)
+  const [showPrices, setShowPrices] = useState(false);
+  const [prices, setPrices] = useState(null);
+  const [loadingPrices, setLoadingPrices] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Load history on mount
+  // Load history and saved books on mount
   useEffect(() => {
     setHistory(getHistory());
+    setSavedBooks(getSavedBooks());
   }, []);
 
   // Convert image to base64
@@ -139,6 +144,50 @@ export default function Home() {
     }
   };
 
+  // Get book prices
+  const getPrices = async () => {
+    if (!bookData) return;
+
+    setShowPrices(true);
+    setLoadingPrices(true);
+
+    try {
+      const response = await fetch('/api/check-prices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          title: bookData.title, 
+          author: bookData.author 
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setPrices(data.data);
+      }
+      setLoadingPrices(false);
+    } catch (err) {
+      console.error('❌ Error getting prices:', err);
+      setLoadingPrices(false);
+    }
+  };
+
+  // Toggle save book
+  const toggleSaveBook = () => {
+    if (!bookData) return;
+
+    const isSaved = isBookSaved(bookData.title);
+    
+    if (isSaved) {
+      const updated = removeFromFavorites(bookData.title);
+      setSavedBooks(updated);
+    } else {
+      const updated = saveToFavorites(bookData);
+      setSavedBooks(updated);
+    }
+  };
+
   // Reset scanner
   const resetScanner = () => {
     setImage(null);
@@ -157,8 +206,7 @@ export default function Home() {
 
   // Handle history item click
   const handleHistoryClick = (book) => {
-    setShowHistory(false);
-    // Could expand this to show full details
+    setShowLibrary(false);
   };
 
   // Clear all history
@@ -169,37 +217,27 @@ export default function Home() {
     }
   };
 
+  // Clear all saved books
+  const handleClearSaved = () => {
+    if (confirm('Are you sure you want to clear all saved books?')) {
+      clearSavedBooks();
+      setSavedBooks([]);
+    }
+  };
+
   // Delete single history item
   const handleDeleteHistoryItem = (bookId) => {
     const updated = deleteFromHistory(bookId);
     setHistory(updated);
   };
 
-  const preferences = analyzePreferences();
-
-  const getPrices = async () => {
-    
-    prices = null
-
-    try {
-      const response = await fetch('/api/check-prices', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prices })
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        setPrices(data.data);
-      }
-    } catch (err) {
-      console.error('❌ Error getting prices:', err);
-    }
-
-
-
+  // Delete single saved book
+  const handleDeleteSavedBook = (bookTitle) => {
+    const updated = removeFromFavorites(bookTitle);
+    setSavedBooks(updated);
   };
+
+  const preferences = analyzePreferences();
 
   return (
     <div className="min-h-screen p-4 md:p-8 transition-colors duration-300 bg-white dark:bg-[#212121]">
@@ -209,11 +247,11 @@ export default function Home() {
         <header className="text-center mb-8 animate-fade-in-up">
           <div className="flex items-center justify-between mb-4">
             <button
-              onClick={() => setShowHistory(!showHistory)}
+              onClick={() => setShowLibrary(!showLibrary)}
               className="rounded-full px-4 py-2 shadow-sm hover:scale-105 transition-smooth flex items-center gap-2 bg-gray-100 dark:bg-[#2f2f2f] hover:bg-gray-200 dark:hover:bg-[#3a3a3a]"
             >
-              <History className="w-4 h-4 text-gray-700 dark:text-gray-300" />
-              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">History ({history.length})</span>
+              <BookOpen className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">Library ({history.length + savedBooks.length})</span>
             </button>
 
             <div className="inline-flex items-center gap-2 rounded-full px-6 py-3 shadow-sm bg-gray-100 dark:bg-[#2f2f2f]">
@@ -252,61 +290,184 @@ export default function Home() {
           )}
         </header>
 
-        {/* History Sidebar */}
-        {showHistory && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 animate-fade-in-up" onClick={() => setShowHistory(false)}>
+        {/* Library Sidebar */}
+        {showLibrary && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 animate-fade-in-up" onClick={() => setShowLibrary(false)}>
             <div 
               className="absolute right-0 top-0 bottom-0 w-full max-w-md shadow-2xl overflow-y-auto bg-white dark:bg-[#2f2f2f]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Scan History</h2>
-                  <button onClick={() => setShowHistory(false)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-[#3a3a3a]">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Library</h2>
+                  <button onClick={() => setShowLibrary(false)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-[#3a3a3a]">
                     <X className="w-6 h-6 text-gray-700 dark:text-gray-300" />
                   </button>
                 </div>
 
-                {history.length === 0 ? (
-                  <p className="text-center py-12 text-gray-600 dark:text-gray-400">No books scanned yet!</p>
-                ) : (
+                {/* Tabs */}
+                <div className="flex gap-2 mb-6">
+                  <button
+                    onClick={() => setLibraryTab('scanned')}
+                    className={`flex-1 py-2 px-4 rounded-lg font-medium transition-smooth ${
+                      libraryTab === 'scanned'
+                        ? 'bg-gray-800 dark:bg-gray-700 text-white'
+                        : 'bg-gray-100 dark:bg-[#212121] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#3a3a3a]'
+                    }`}
+                  >
+                    Scanned ({history.length})
+                  </button>
+                  <button
+                    onClick={() => setLibraryTab('saved')}
+                    className={`flex-1 py-2 px-4 rounded-lg font-medium transition-smooth ${
+                      libraryTab === 'saved'
+                        ? 'bg-gray-800 dark:bg-gray-700 text-white'
+                        : 'bg-gray-100 dark:bg-[#212121] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#3a3a3a]'
+                    }`}
+                  >
+                    Saved ({savedBooks.length})
+                  </button>
+                </div>
+
+                {/* Scanned Tab */}
+                {libraryTab === 'scanned' && (
                   <>
-                    <button
-                      onClick={handleClearHistory}
-                      className="text-sm text-red-600 hover:text-red-700 mb-4"
-                    >
-                      Clear All History
-                    </button>
-                    <div className="space-y-3">
-                      {history.map((book) => (
-                        <div
-                          key={book.id}
-                          className="p-4 rounded-lg transition-smooth cursor-pointer flex items-start gap-3 bg-gray-50 dark:bg-[#212121] hover:bg-gray-100 dark:hover:bg-[#3a3a3a]"
-                          onClick={() => handleHistoryClick(book)}
+                    {history.length === 0 ? (
+                      <p className="text-center py-12 text-gray-600 dark:text-gray-400">No books scanned yet!</p>
+                    ) : (
+                      <>
+                        <button
+                          onClick={handleClearHistory}
+                          className="text-sm text-red-600 hover:text-red-700 mb-4"
                         >
-                          <BookOpen className="w-5 h-5 mt-1 flex-shrink-0 text-gray-700 dark:text-gray-300" />
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold truncate text-gray-900 dark:text-gray-100">{book.title}</h3>
-                            <p className="text-sm truncate text-gray-600 dark:text-gray-400">{book.author}</p>
-                            <p className="text-xs mt-1 text-gray-500 dark:text-gray-500">
-                              {new Date(book.scannedAt).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteHistoryItem(book.id);
-                            }}
-                            className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-500"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
+                          Clear All History
+                        </button>
+                        <div className="space-y-3">
+                          {history.map((book) => (
+                            <div
+                              key={book.id}
+                              className="p-4 rounded-lg transition-smooth cursor-pointer flex items-start gap-3 bg-gray-50 dark:bg-[#212121] hover:bg-gray-100 dark:hover:bg-[#3a3a3a]"
+                              onClick={() => handleHistoryClick(book)}
+                            >
+                              <BookOpen className="w-5 h-5 mt-1 flex-shrink-0 text-gray-700 dark:text-gray-300" />
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold truncate text-gray-900 dark:text-gray-100">{book.title}</h3>
+                                <p className="text-sm truncate text-gray-600 dark:text-gray-400">{book.author}</p>
+                                <p className="text-xs mt-1 text-gray-500 dark:text-gray-500">
+                                  {new Date(book.scannedAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteHistoryItem(book.id);
+                                }}
+                                className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-500"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </>
+                    )}
+                  </>
+                )}
+
+                {/* Saved Tab */}
+                {libraryTab === 'saved' && (
+                  <>
+                    {savedBooks.length === 0 ? (
+                      <p className="text-center py-12 text-gray-600 dark:text-gray-400">No saved books yet!</p>
+                    ) : (
+                      <>
+                        <button
+                          onClick={handleClearSaved}
+                          className="text-sm text-red-600 hover:text-red-700 mb-4"
+                        >
+                          Clear All Saved
+                        </button>
+                        <div className="space-y-3">
+                          {savedBooks.map((book, i) => (
+                            <div
+                              key={i}
+                              className="p-4 rounded-lg transition-smooth cursor-pointer flex items-start gap-3 bg-gray-50 dark:bg-[#212121] hover:bg-gray-100 dark:hover:bg-[#3a3a3a]"
+                            >
+                              <Heart className="w-5 h-5 mt-1 flex-shrink-0 text-red-500 fill-red-500" />
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold truncate text-gray-900 dark:text-gray-100">{book.title}</h3>
+                                <p className="text-sm truncate text-gray-600 dark:text-gray-400">{book.author}</p>
+                                <p className="text-xs mt-1 text-gray-500 dark:text-gray-500">
+                                  Saved {new Date(book.savedAt).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteSavedBook(book.title);
+                                }}
+                                className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-500"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Prices Modal */}
+        {showPrices && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in-up" onClick={() => setShowPrices(false)}>
+            <div 
+              className="rounded-3xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl bg-white dark:bg-[#2f2f2f]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Find Prices</h2>
+                <button onClick={() => setShowPrices(false)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-[#3a3a3a]">
+                  <X className="w-6 h-6 text-gray-700 dark:text-gray-300" />
+                </button>
+              </div>
+
+              {loadingPrices ? (
+                <div className="flex flex-col items-center gap-4 py-12">
+                  <DollarSign className="w-12 h-12 animate-pulse text-gray-700 dark:text-gray-300" />
+                  <p className="text-gray-600 dark:text-gray-400">Checking prices...</p>
+                </div>
+              ) : prices ? (
+                <>
+                  {prices.note && (
+                    <p className="mb-6 p-4 rounded-lg border text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-[#212121] border-gray-200 dark:border-gray-700">
+                      💡 {prices.note}
+                    </p>
+                  )}
+                  <div className="space-y-3">
+                    {prices.prices.map((item, i) => (
+                      <div key={i} className="p-4 rounded-2xl border transition-smooth bg-gray-50 dark:bg-[#212121] border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{item.retailer}</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{item.format}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">{item.availability}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{item.price}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="text-center py-12 text-gray-600 dark:text-gray-400">Failed to load prices. Try again!</p>
+              )}
             </div>
           </div>
         )}
@@ -402,7 +563,9 @@ export default function Home() {
                 </div>
 
                 <div className="flex flex-wrap gap-2 justify-center mt-4">
-                  
+                  <span className="px-3 py-1 rounded-full text-sm bg-gray-200 dark:bg-[#3a3a3a] text-gray-700 dark:text-gray-300">
+                    ✨ AI-Powered
+                  </span>
                   <span className="px-3 py-1 rounded-full text-sm bg-gray-200 dark:bg-[#3a3a3a] text-gray-700 dark:text-gray-300">
                     🚫 No Spoilers
                   </span>
@@ -538,26 +701,26 @@ export default function Home() {
 
                   {/* Detailed Summary */}
                   {showDetailedSummary && detailedData && (
-                    <div className="pt-4 border-t-2 border-orange-200 bg-orange-50/50 -mx-6 -mb-6 px-6 pb-6 rounded-b-3xl">
-                      <div className="flex items-start gap-2 mb-4 p-3 bg-orange-100 rounded-lg">
-                        <AlertTriangle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
-                        <p className="text-sm text-orange-800">
+                    <div className="pt-4 border-t-2 -mx-6 -mb-6 px-6 pb-6 rounded-b-3xl border-orange-300 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/30">
+                      <div className="flex items-start gap-2 mb-4 p-3 rounded-lg bg-orange-100 dark:bg-orange-900/50">
+                        <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5 text-orange-600 dark:text-orange-500" />
+                        <p className="text-sm text-orange-800 dark:text-orange-300">
                           <strong>Warning:</strong> The following contains more detailed plot information that may spoil your reading experience.
                         </p>
                       </div>
 
-                      <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                      <h3 className="font-semibold mb-3 flex items-center gap-2 text-gray-900 dark:text-gray-100">
                         <span className="text-2xl">📕</span>
                         Detailed Summary
                       </h3>
-                      <p className="text-gray-700 leading-relaxed mb-4">
+                      <p className="leading-relaxed mb-4 text-gray-700 dark:text-gray-300">
                         {detailedData.summary}
                       </p>
 
                       {detailedData.detailedPlot && (
                         <>
-                          <h4 className="font-semibold text-gray-800 mb-2">Story Progression:</h4>
-                          <p className="text-gray-700 leading-relaxed mb-4">
+                          <h4 className="font-semibold mb-2 text-gray-900 dark:text-gray-100">Story Progression:</h4>
+                          <p className="leading-relaxed mb-4 text-gray-700 dark:text-gray-300">
                             {detailedData.detailedPlot}
                           </p>
                         </>
@@ -565,10 +728,10 @@ export default function Home() {
 
                       {detailedData.themes && detailedData.themes.length > 0 && (
                         <>
-                          <h4 className="font-semibold text-gray-800 mb-2">Major Themes:</h4>
+                          <h4 className="font-semibold mb-2 text-gray-900 dark:text-gray-100">Major Themes:</h4>
                           <div className="flex gap-2 flex-wrap">
                             {detailedData.themes.map((theme, i) => (
-                              <span key={i} className="px-3 py-1 rounded-full bg-orange-200 text-orange-800 text-sm">
+                              <span key={i} className="px-3 py-1 rounded-full text-sm bg-orange-200 dark:bg-orange-900 text-orange-800 dark:text-orange-300">
                                 {theme}
                               </span>
                             ))}
@@ -578,7 +741,7 @@ export default function Home() {
 
                       <button
                         onClick={() => setShowDetailedSummary(false)}
-                        className="mt-4 text-sm text-orange-700 hover:text-orange-800 font-medium"
+                        className="mt-4 text-sm font-medium text-orange-700 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300"
                       >
                         Hide Detailed Summary
                       </button>
@@ -588,7 +751,7 @@ export default function Home() {
                   {/* Similar Books */}
                   {bookData.similarBooks && bookData.similarBooks.length > 0 && (
                     <div className="pt-2">
-                      <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                      <h3 className="font-semibold mb-3 flex items-center gap-2 text-gray-900 dark:text-gray-100">
                         <span className="text-2xl">💡</span>
                         If you like this, try:
                       </h3>
@@ -596,9 +759,9 @@ export default function Home() {
                         {bookData.similarBooks.map((book, i) => (
                           <div 
                             key={i} 
-                            className="flex items-center gap-2 text-gray-700 bg-white/40 rounded-lg px-4 py-2 backdrop-blur-sm hover:bg-white/60 transition-smooth"
+                            className="flex items-center gap-2 rounded-lg px-4 py-2 transition-smooth bg-gray-100 dark:bg-[#212121] hover:bg-gray-200 dark:hover:bg-[#3a3a3a] text-gray-700 dark:text-gray-300"
                           >
-                            <BookOpen className="w-4 h-4 text-purple-600" />
+                            <BookOpen className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                             <span>{book}</span>
                           </div>
                         ))}
@@ -608,8 +771,8 @@ export default function Home() {
 
                   {/* Content Warnings */}
                   {bookData.contentWarnings && bookData.contentWarnings.length > 0 && (
-                    <div className="pt-4 border-t border-gray-200/50">
-                      <h3 className="font-semibold text-gray-700 text-sm mb-3 flex items-center gap-2">
+                    <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <h3 className="font-semibold text-sm mb-3 flex items-center gap-2 text-gray-700 dark:text-gray-300">
                         <span>⚠️</span>
                         Content Notes
                       </h3>
@@ -617,7 +780,7 @@ export default function Home() {
                         {bookData.contentWarnings.map((warning, i) => (
                           <span 
                             key={i} 
-                            className="px-3 py-1.5 rounded-full bg-gray-200/80 backdrop-blur-sm text-gray-700 text-xs border border-gray-300"
+                            className="px-3 py-1.5 rounded-full text-xs border bg-gray-200 dark:bg-[#3a3a3a] text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600"
                           >
                             {warning}
                           </span>
@@ -628,13 +791,19 @@ export default function Home() {
 
                   {/* Action Buttons */}
                   <div className="grid grid-cols-2 gap-4 pt-4">
-                    <button className="py-4 px-6 rounded-2xl bg-gradient-to-r from-purple-500 via-pink-500 to-rose-500 text-white font-semibold shadow-hard hover:shadow-xl transition-smooth hover:scale-[1.02] flex items-center justify-center gap-2">
-                      <ExternalLink className="w-5 h-5" />
+                    <button 
+                      onClick={getPrices}
+                      className="py-4 px-6 rounded-2xl font-semibold shadow-md transition-smooth hover:scale-[1.02] flex items-center justify-center gap-2 bg-gray-800 dark:bg-gray-700 hover:bg-gray-900 dark:hover:bg-gray-600 text-white"
+                    >
+                      <DollarSign className="w-5 h-5" />
                       Find Prices
                     </button>
-                    <button className="py-4 px-6 rounded-2xl glass-strong text-gray-800 font-semibold shadow-hard hover:shadow-xl transition-smooth hover:scale-[1.02] flex items-center justify-center gap-2">
-                      <Heart className="w-5 h-5" />
-                      Save Book
+                    <button 
+                      onClick={toggleSaveBook}
+                      className="py-4 px-6 rounded-2xl font-semibold shadow-md transition-smooth hover:scale-[1.02] flex items-center justify-center gap-2 bg-gray-200 dark:bg-[#3a3a3a] hover:bg-gray-300 dark:hover:bg-[#4a4a4a] text-gray-800 dark:text-gray-200"
+                    >
+                      <Heart className={`w-5 h-5 ${isBookSaved(bookData?.title) ? 'fill-red-500 text-red-500' : ''}`} />
+                      {isBookSaved(bookData?.title) ? 'Saved' : 'Save Book'}
                     </button>
                   </div>
                 </div>
@@ -643,7 +812,7 @@ export default function Home() {
               {/* Scan Another Button */}
               <button
                 onClick={resetScanner}
-                className="w-full py-4 rounded-2xl glass text-gray-800 font-semibold shadow-soft hover:shadow-lg transition-smooth hover:scale-[1.02] flex items-center justify-center gap-2"
+                className="w-full py-4 rounded-2xl font-semibold shadow-md transition-smooth hover:scale-[1.02] flex items-center justify-center gap-2 bg-gray-100 dark:bg-[#2f2f2f] hover:bg-gray-200 dark:hover:bg-[#3a3a3a] text-gray-800 dark:text-gray-200"
               >
                 <ArrowLeft className="w-5 h-5" />
                 Scan Another Book
@@ -652,7 +821,6 @@ export default function Home() {
           )}
 
         </main>
-        
 
       </div>
     </div>
